@@ -12,18 +12,32 @@ connectDB();
 
 const app = express();
 
-// Middleware
-app.use(cors()); // Allows frontend to talk to backend
-app.use(express.json()); // Parses JSON bodies
+// --- CRITICAL UPDATE 1: CORS ---
+// Instead of just app.use(cors()), restrict it to your specific frontend URL
+app.use(cors({
+  origin: process.env.CLIENT_URL || "http://localhost:3000",
+  credentials: true
+}));
+
+app.use(express.json());
+
+// Add a Root Route (Helpful for checking if the server is live)
+app.get("/", (req, res) => {
+  res.send("HireSense API is running successfully.");
+});
 
 // Mount Routes
-app.use('/api/auth', authRoutes); // Handles /api/auth/register & login
-app.use('/api/applications', applicationRoutes); // Handles /api/applications/apply
+app.use('/api/auth', authRoutes);
+app.use('/api/applications', applicationRoutes);
 
 // Catch-all for undefined routes
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found on server" });
 });
 
+// --- CRITICAL UPDATE 2: HOST BINDING ---
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+// Adding "0.0.0.0" ensures Render can map its external IP to your app
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`Server running on port ${PORT}`);
+});
