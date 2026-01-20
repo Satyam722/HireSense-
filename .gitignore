@@ -1,0 +1,23 @@
+# --- Top Level Secrets ---
+.env
+.env.local
+
+# --- Frontend (Client) ---
+client/node_modules/
+client/dist/
+client/.env
+client/.env.local
+
+# --- Backend (Server) ---
+server/node_modules/
+server/.env
+server/npm-debug.log*
+
+# --- Root Level Dependencies ---
+node_modules/
+
+# --- System & IDE Files ---
+.DS_Store
+.vscode/
+.idea/
+Thumbs.db
