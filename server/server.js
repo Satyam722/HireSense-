@@ -15,10 +15,15 @@ cloudinary.api.ping()
   .catch(err => console.error("❌ Cloudinary Connection Failed:", err.message));
 
 const app = express();
-// 4. Global Middleware
-// Replace app.use(cors()); with this:
+
+// 4. Global Middleware - Configured for Production
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:5174'], // Matches your Vite frontend port
+  origin: [
+    'http://localhost:5173', 
+    'http://localhost:5174',
+    'https://hiresenseproject.vercel.app',
+    'https://hiresense-nq28x2o4i-satyams-projects-e91b4b38.vercel.app'
+  ],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -26,29 +31,31 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' })); 
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
 // 5. API Routes
-// These mount your logic to specific URL paths
+// Note: Ensure your frontend api.js uses these exact prefixes
 app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/jobs', require('./routes/jobRoutes'));
 app.use('/api/applications', require('./routes/applicationRoutes'));
 
-// 6. Root Test Route
+// 6. Root Test Route (Check this at https://hiresense-server-yllu.onrender.com)
 app.get('/', (req, res) => {
   res.status(200).json({ 
     message: '🚀 HireSense AI API is running...',
-    status: 'Healthy'
+    status: 'Healthy',
+    environment: process.env.NODE_ENV || 'development'
   });
 });
 
 // 7. 404 Handler for undefined routes
 app.use((req, res, next) => {
-  res.status(404).json({ message: "Route not found" });
+  console.log(`❌ 404 Route Not Found: ${req.method} ${req.originalUrl}`);
+  res.status(404).json({ message: "Route not found on server" });
 });
 
 // 8. Global Error Handling Middleware
-// This ensures that any crash in your controller returns a clean JSON error to Postman/Frontend
 app.use((err, req, res, next) => {
-  console.error("Internal Error Stack:", err.stack);
+  console.error("🔥 Internal Error Stack:", err.stack);
   const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
   res.status(statusCode).json({
     success: false,
