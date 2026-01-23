@@ -1,11 +1,14 @@
 import axios from 'axios';
 
-// Create an axios instance with the base URL of your backend
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api', // Ensure this matches your backend port
+  // ✅ CORRECTED: Pointing to your local Node.js server
+  baseURL: 'http://localhost:5000/api',
+  headers: {
+    'Content-Type': 'application/json'
+  }
 });
 
-// Add a request interceptor to attach the token to every request
+// Automatically add the JWT token to every request
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('token');
@@ -15,6 +18,19 @@ api.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Optional: Handle 401 errors (unauthorized) globally
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response && error.response.status === 401) {
+      // If token expires, you might want to clear local storage
+      // localStorage.removeItem('token');
+      // window.location.href = '/login';
+    }
     return Promise.reject(error);
   }
 );

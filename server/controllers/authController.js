@@ -1,4 +1,5 @@
-const User = require('../models/User'); 
+// FIXED: Changed 'User' to 'user' to match your filename exactly
+const User = require('../models/user'); 
 const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const cloudinary = require('../config/cloudinary');
@@ -30,6 +31,7 @@ exports.register = async (req, res) => {
 exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
+    // Ensure we select password to compare it
     const user = await User.findOne({ email }).select('+password');
 
     if (user && (await bcrypt.compare(password, user.password))) {
@@ -56,7 +58,7 @@ exports.getProfile = async (req, res) => {
           name: user.name,
           email: user.email,
           role: user.role,
-          resumeUrl: user.resumeUrl // Make sure this is sent
+          resumeUrl: user.resumeUrl 
         }
       });
     } else {
@@ -67,14 +69,18 @@ exports.getProfile = async (req, res) => {
   }
 };
 
-// @desc    Upload & Save Resume URL (FIXED FOR RECRUITER VIEW)
+// @desc    Upload & Save Resume URL
 exports.uploadResume = async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ message: "No file provided" });
 
-    // Upload to Cloudinary
+    // Upload to Cloudinary using the buffer from memoryStorage
     const stream = cloudinary.uploader.upload_stream(
-      { folder: "resumes", resource_type: "raw", format: "pdf" },
+      { 
+        folder: "resumes", 
+        resource_type: "auto", // Changed to auto to handle different file types better
+        access_mode: "public"
+      },
       async (error, result) => {
         if (error) return res.status(500).json({ message: "Cloudinary Error", error });
 
@@ -85,7 +91,6 @@ exports.uploadResume = async (req, res) => {
           { new: true }
         );
 
-        // Return the URL clearly
         res.status(200).json({ 
           message: "Resume uploaded successfully!", 
           resumeUrl: user.resumeUrl 

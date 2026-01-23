@@ -3,11 +3,11 @@ import { useParams, useNavigate } from 'react-router-dom';
 import Sidebar from '../../components/layout/Sidebar';
 import api from '../../utils/api';
 import { 
-  Loader2, CheckCircle2, Sparkles, ArrowLeft, FileText, XCircle 
+  Loader2, CheckCircle2, Sparkles, ArrowLeft, FileText, ChevronDown, ChevronUp 
 } from 'lucide-react';
 
 const ApplicantsList = () => {
-  const { jobId: urlJobId } = useParams(); // Get :jobId from /jobs/:jobId/applicants
+  const { jobId: urlJobId } = useParams();
   const navigate = useNavigate();
   
   const [applicants, setApplicants] = useState([]);
@@ -15,6 +15,7 @@ const ApplicantsList = () => {
   const [loading, setLoading] = useState(true);
   const [processingId, setProcessingId] = useState(null);
   const [isAutoProcessing, setIsAutoProcessing] = useState(false);
+  const [expandedId, setExpandedId] = useState(null); // To toggle full summary
 
   useEffect(() => {
     fetchApplicants();
@@ -23,7 +24,6 @@ const ApplicantsList = () => {
   const fetchApplicants = async () => {
     try {
       setLoading(true);
-      // Determine endpoint based on URL
       const endpoint = urlJobId 
         ? `/jobs/${urlJobId}/applicants` 
         : '/jobs/recruiter/all-applicants';
@@ -31,11 +31,9 @@ const ApplicantsList = () => {
       const res = await api.get(endpoint);
       
       if (urlJobId) {
-        // Backend returns { jobTitle, applicants } for specific job
         setApplicants(res.data.applicants || []);
         setJobTitle(res.data.jobTitle);
       } else {
-        // Backend returns { applications } for global view
         setApplicants(res.data.applications || []);
         setJobTitle('Global Talent Pool');
       }
@@ -47,12 +45,10 @@ const ApplicantsList = () => {
   };
 
   const handleShortlistToggle = async (app) => {
-    // 1. Identify IDs
     const effectiveJobId = urlJobId || app.job?._id || app.job;
     const applicantId = app._id;
     
     if (!effectiveJobId || !applicantId) {
-      console.error("Missing IDs", { effectiveJobId, applicantId });
       alert("Error: Missing Job or Applicant ID");
       return;
     }
@@ -61,19 +57,16 @@ const ApplicantsList = () => {
     setProcessingId(applicantId);
 
     try {
-      // 2. Call API
       const res = await api.patch(`/jobs/${effectiveJobId}/applicants/${applicantId}`, { 
         status: nextStatus 
       });
 
-      // 3. Update State if backend reports success
       if (res.data.success) {
         setApplicants(prev => prev.map(item => 
           item._id === applicantId ? { ...item, status: nextStatus } : item
         ));
       }
     } catch (err) {
-      console.error("Shortlist Error:", err.response?.data || err.message);
       alert(err.response?.data?.message || "Failed to update status.");
     } finally {
       setProcessingId(null);
@@ -86,10 +79,7 @@ const ApplicantsList = () => {
       .sort((a, b) => b.aiScore - a.aiScore)
       .slice(0, 5);
 
-    if (topCandidates.length === 0) {
-      alert("No candidates available to shortlist.");
-      return;
-    }
+    if (topCandidates.length === 0) return;
 
     setIsAutoProcessing(true);
     try {
@@ -104,9 +94,9 @@ const ApplicantsList = () => {
       setApplicants(prev => prev.map(item => 
         topIds.includes(item._id) ? { ...item, status: 'Shortlisted' } : item
       ));
-      alert("Top 5 candidates shortlisted successfully!");
+      alert("Top candidates shortlisted!");
     } catch (err) {
-      alert("Some candidates could not be shortlisted.");
+      alert("Shortlisting failed.");
     } finally {
       setIsAutoProcessing(false);
     }
@@ -122,16 +112,16 @@ const ApplicantsList = () => {
               onClick={() => navigate(-1)}
               className="flex items-center gap-2 text-slate-400 hover:text-slate-900 transition-colors mb-4 text-xs font-bold uppercase tracking-wider"
             >
-              <ArrowLeft size={14} /> Back to Dashboard
+              <ArrowLeft size={14} /> Back
             </button>
             <h1 className="text-4xl font-[1000] text-slate-900 tracking-tight">{jobTitle || 'Loading...'}</h1>
-            <p className="text-slate-500 font-medium mt-1">Found {applicants.length} Total Applications</p>
+            <p className="text-slate-500 font-medium mt-1">{applicants.length} Total Applications</p>
           </div>
 
           <button
             onClick={handleAutoShortlist}
             disabled={isAutoProcessing || loading || applicants.length === 0}
-            className="flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs hover:bg-blue-600 transition-all shadow-2xl shadow-blue-100 disabled:opacity-50"
+            className="flex items-center gap-2 bg-slate-900 text-white px-8 py-4 rounded-2xl font-black text-xs hover:bg-blue-600 transition-all shadow-xl disabled:opacity-50"
           >
             {isAutoProcessing ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} className="text-yellow-400" />}
             AUTO-SHORTLIST TOP 5
@@ -143,7 +133,7 @@ const ApplicantsList = () => {
             <thead className="bg-slate-50/50 border-b border-slate-100">
               <tr>
                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Candidate</th>
-                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Match Score</th>
+                <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Match Details</th>
                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-center">Resume</th>
                 <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
               </tr>
@@ -166,17 +156,26 @@ const ApplicantsList = () => {
                   </td>
 
                   <td className="px-8 py-8">
-                    <div className="flex flex-col gap-2">
-                      <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black w-fit ${app.aiScore > 90 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
+                    <div className="flex flex-col gap-2 max-w-md">
+                      <span className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-black w-fit ${app.aiScore > 80 ? 'bg-green-100 text-green-700' : 'bg-blue-100 text-blue-700'}`}>
                         <Sparkles size={12} /> {app.aiScore}% Match
                       </span>
-                      <p className="text-[10px] text-slate-500 italic line-clamp-2 max-w-xs">{app.aiSummary}</p>
+                      
+                      {/* Summary with Toggle for Full View */}
+                      <div className="group cursor-pointer" onClick={() => setExpandedId(expandedId === app._id ? null : app._id)}>
+                        <p className={`text-[12px] text-slate-600 font-medium leading-relaxed ${expandedId === app._id ? '' : 'line-clamp-2'}`}>
+                          {app.aiSummary || "Analysis summary pending..."}
+                        </p>
+                        <button className="text-[10px] font-bold text-blue-600 mt-1 flex items-center gap-1">
+                          {expandedId === app._id ? <><ChevronUp size={12}/> Show Less</> : <><ChevronDown size={12}/> Read Full Summary</>}
+                        </button>
+                      </div>
                     </div>
                   </td>
 
                   <td className="px-8 py-8 text-center">
-                    <a href={app.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-700">
-                      <FileText size={14} /> PDF
+                    <a href={app.resumeUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs hover:bg-slate-200">
+                      <FileText size={14} /> VIEW PDF
                     </a>
                   </td>
 

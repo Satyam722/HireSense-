@@ -15,7 +15,6 @@ const applicantSchema = new mongoose.Schema({
     type: Number,
     default: 0
   },
-  // ADD THIS FIELD TO STORE THE GEMINI SUMMARY
   aiSummary: {
     type: String,
     default: ""
@@ -33,25 +32,11 @@ const applicantSchema = new mongoose.Schema({
 
 // Main Job Schema
 const jobSchema = new mongoose.Schema({
-  title: { 
-    type: String, 
-    required: true 
-  },
-  company: { 
-    type: String, 
-    required: true 
-  },
-  location: { 
-    type: String, 
-    required: true 
-  },
-  description: { 
-    type: String, 
-    required: true 
-  },
-  salary: { 
-    type: String 
-  },
+  title: { type: String, required: true },
+  company: { type: String, required: true },
+  location: { type: String, required: true },
+  description: { type: String, required: true },
+  salary: { type: String },
   requirements: [String],
   postedBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -59,10 +44,8 @@ const jobSchema = new mongoose.Schema({
     required: true
   },
   applicants: [applicantSchema],
-  createdAt: { 
-    type: Date, 
-    default: Date.now 
-  }
+  createdAt: { type: Date, default: Date.now }
 });
 
-module.exports = mongoose.model('Job', jobSchema);
+// ✅ FIX: Prevent OverwriteModelError by checking if 'Job' exists
+module.exports = mongoose.models.Job || mongoose.model('Job', jobSchema);
