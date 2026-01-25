@@ -1,6 +1,6 @@
 // server/controllers/applicationController.js
 
-const Job = require('../models/job'); 
+const Job = require('../models/Job'); 
 const User = require('../models/user');
 const pdf = require('pdf-parse'); 
 const cloudinary = require('../config/cloudinary');
